@@ -1,0 +1,59 @@
+---
+- hosts : all
+  tasks:
+    - name : Install dependencies
+      become: true
+      apt:
+        name: ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg2', 'software-properties-common']
+        state: present
+
+    - name : Add Docker GPG Key
+      become: true
+      apt_key:
+          url: https://download.docker.com/linux/debian/gpg
+          state: present
+
+    - name : Add Docker Repository
+      become: true
+      apt_repository:
+          repo: deb https://download.docker.com/linux/debian stretch stable 
+          state: present
+          update_cache: yes
+
+    - name: Install dependencies
+      become: true
+      apt:
+        name: ['docker-compose', 'docker-ce', 'docker-ce-cli', 'containerd.io']
+        state: present
+        update_cache: yes
+
+    - name: Ensure docker group exists
+      become: true
+      group:
+        name: docker
+        state: present
+      
+    - name: Add vagrant user to docker group
+      become: true
+      user:
+        name: vagrant
+        group: docker
+
+    - name: Copy Traefik config file
+      become: true
+      copy:
+        src: /Users/ali/microservices/ansible/gateway/gateway.toml
+        dest: /home/vagrant/traefik.toml
+    
+    - name: Create and start Traefik
+      become: true
+      docker_container:
+        name: traefik
+        image: traefik:v2.0
+        state: started
+        restart: yes
+        volumes:
+          - "/home/vagrant/traefik.toml:/etc/traefik/traefik.toml"
+          - "/var/run/docker.sock:/var/run/docker.sock"
+
+  
